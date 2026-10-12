@@ -1,632 +1,475 @@
-<!-- Save this as ghayas_chatbot_full.html and open in browser -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GHAYAS AI Chatbot — Pro Upgrade</title>
-
-  <!-- Poppins font -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    /* ===== GLOBAL RESET & BASE (one-line comments explain purpose) ===== */
-    * { box-sizing: border-box; margin:0; padding:0; } /* reset margins/padding */
-    html,body { height:100%; font-family:'Poppins',system-ui,Arial; background:linear-gradient(180deg,#0b0f1a 0%, #0f172a 60%); color:#E6EEF6; overflow:hidden; }
-
-    /* ===== HEADER — title bar with neon gradient ===== */
-    header { display:flex; align-items:center; justify-content:space-between; padding: 15px 15px; background:linear-gradient(90deg,#8B5CF6,#22D3EE); box-shadow:0 6px 30px rgba(10,12,25,0.6); border-bottom:1px solid rgba(255,255,255,0.03); }
-    header h1 { font-size:1.25rem; margin:0; }
-    header .subtitle { font-size:0.85rem; opacity:0.95;
-      padding: auto; margin-top:4px; font-weight:500; color:rgba(169, 66, 66, 0.85); 
-     }
-
-    /* ===== FLOATING CONTROLS (chat/calendar + auth) ===== */
-    .floating { position:absolute; right:18px; top:18px; display:flex; gap:8px; align-items:center; z-index:220; }
-    .btn { background:linear-gradient(90deg,#6b4cff,#12c2e9); color:white; border:none; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:600; box-shadow:0 6px 18px rgba(18,194,233,0.06); transition:transform .14s, filter .14s; }
-    .btn:hover{ transform:translateY(-3px); filter:brightness(1.08); }
-    .btn.ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); }
-
-    /* ===== MAIN LAYOUT — chat panel area ===== */
-    .container { display:flex; gap:16px; padding:16px; height:calc(100vh - 72px); } /* holds main chat and side */
-    .chat-panel { flex:1; display:flex; flex-direction:column; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); box-shadow:0 8px 40px rgba(3,8,20,0.6); border:1px solid rgba(255,255,255,0.03); overflow:hidden; }
-    .chat-frame { width:100%; height:100%; border:none; }
-
-    /* ===== SIDEBAR (tools toggle) ===== */
-    .menu-btn { position:absolute; left:14px; top:18px; font-size:20px; background:none; border:none; color:white; cursor:pointer; z-index:230; }
-    .sidebar { position:fixed; left:-280px; top:0; height:100%; width:260px; background:rgba(17,24,39,0.95); padding:18px; border-right:2px solid rgba(139,92,246,0.3); box-shadow:0 0 15px rgba(139,92,246,0.12); transition:left .36s ease; z-index:200; }
-    .sidebar.open { left:0; } /* slide-in class */
-    .sidebar h2 { color:#22D3EE; text-align:center; margin-bottom:14px; }
-    .sidebar button { width:100%; margin-bottom:10px; padding:10px; border-radius:10px; border:none; background:linear-gradient(135deg,#8B5CF6,#22D3EE); color:white; cursor:pointer; }
-
-    /* ===== TOOL POPUPS (right-bottom) ===== */
-    .tool { position:fixed; right:18px; bottom:18px; width:340px; max-height:78%; background:#0f2433; border-radius:14px; padding:16px; box-shadow:0 12px 40px rgba(2,6,18,0.8); border:1px solid rgba(255,255,255,0.03); display:none; overflow:auto; color:#E6EEF6; z-index:210; }
-    .tool.show { display:block; animation:slideUp .32s ease; }
-    @keyframes slideUp { from{ transform: translateY(30px); opacity:0 } to{ transform: translateY(0); opacity:1 } }
-    .tool .close { float:right; background:none;border:none;color:#22D3EE;font-size:1.2rem; cursor:pointer; }
-
-    /* ===== FORM INPUTS & SHARED STYLES ===== */
-    input, textarea, select, button { font-family:'Poppins',sans-serif; }
-    .field { width:100%; margin-top:10px; padding:10px; border-radius:10px; border:none; background:#071022; color:#E6EEF6; }
-
-    /* ===== TO-DO LIST ===== */
-    #taskList { margin-top:12px; list-style:none; padding-left:0; max-height:220px; overflow:auto; }
-    #taskList li { background:#172634; margin-bottom:8px; padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; }
-    #taskList li button { background:#ff8da0; border:none; border-radius:8px; padding:6px 8px; cursor:pointer; color:white; }
-
-    /* ===== LINKS ===== */
-    .link-card { background:#172b3a; padding:12px; border-radius:10px; display:flex; gap:10px; align-items:center; margin-top:8px; }
-    .link-card a { color:#BFE9FF; font-weight:600; flex:1; }
-
-    /* ===== FLASHCARD STACK MODAL (center) ===== */
-    .modal-backdrop { position:fixed; inset:0; background:rgba(2,6,18,0.6); display:none; align-items:center; justify-content:center; z-index:260; }
-    .modal-backdrop.show { display:flex; animation:fadeInBackdrop .24s ease; }
-    @keyframes fadeInBackdrop { from{opacity:0} to{opacity:1} }
-    .stack-modal { width:92%; max-width:700px; height:565px; background:linear-gradient(180deg,#091322,#0d2540); border-radius:14px; padding:18px; box-shadow:0 20px 60px rgba(3,8,20,0.8); position:relative; overflow:hidden; }
-    .stack-header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    .stack-area { position:relative; width:100%; height:420px; margin-top:12px; display:flex; align-items:center; justify-content:center; perspective:1200px; }
-    .card-stack { position:absolute; width:420px; height:280px; transform-origin:center center; display:flex; align-items:center; justify-content:center; }
-    .card { position:absolute; width:420px; height:280px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:white; backface-visibility:hidden; cursor:pointer; transform-style:preserve-3d; transition:transform .5s ease, box-shadow .2s; box-shadow:0 20px 50px rgba(2,6,18,0.6); }
-    .card.front { background:linear-gradient(90deg,#12203a,#19283f); }
-    .card.back { background:linear-gradient(90deg,#0d314a,#0b2540); transform:rotateY(180deg); }
-    .card-inner { position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform .5s ease; }
-    .flipped .card-inner { transform:rotateY(180deg); } /* flip transform */
-
-    /* small nav controls in modal */
-    .stack-controls { display:flex; gap:8px; margin-top:12px; justify-content:center; }
-    .small-btn { background:transparent; color:#BFE9FF; border:1px solid rgba(191,233,255,0.12); padding:8px 10px; border-radius:8px; cursor:pointer; }
-
-    /* ===== AUTH MODAL ===== */
-    .auth-modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:300; background:rgba(2,6,18,0.6); }
-    .auth-modal.show { display:flex; }
-    .auth-box { background:linear-gradient(180deg,#071423,#0c2338); padding:18px; border-radius:12px; width:360px; box-shadow:0 20px 60px rgba(2,6,18,0.9); border:1px solid rgba(255,255,255,0.04); }
-
-    /* ===== SMALL RESPONSIVE ===== */
-    @media (max-width:900px){ .stack-area{height:320px} .card{width:320px;height:200px;font-size:18px;} .stack-modal{height:460px} .tool{width:92%; right:6px} }
-
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GHAYAS AI Chatbot</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+{ box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+font-family: 'Poppins', system-ui, Arial, sans-serif;
+background: linear-gradient(180deg, #0b0f1a 0%, #0f172a 60%);
+color: #E6EEF6;
+display: flex; flex-direction: column;
+height: 100dvh; overflow: hidden;
+}
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
+outline: 2px solid #22D3EE; outline-offset: 2px;
+}
+/* ===== HEADER ===== /
+header {
+display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+padding: 12px 16px;
+background: linear-gradient(90deg, #8B5CF6, #22D3EE);
+box-shadow: 0 6px 30px rgba(10,12,25,0.6);
+}
+.menu-btn { font-size: 22px; background: none; border: none; color: white; cursor: pointer; padding: 4px 8px; }
+.title { flex: 1; text-align: center; min-width: 180px; }
+.title h1 { font-size: 1.25rem; }
+.title .subtitle { font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.85); }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.btn {
+background: linear-gradient(90deg, #6b4cff, #12c2e9); color: white; border: none;
+padding: 9px 12px; border-radius: 10px; cursor: pointer; font-weight: 600;
+transition: transform .14s, filter .14s;
+}
+.btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.btn.ghost { background: transparent; border: 1px solid rgba(255,255,255,0.25); }
+.btn.active { outline: 2px solid white; }
+/* ===== MAIN CHAT AREA ===== /
+.container { flex: 1; min-height: 0; padding: 16px; display: flex; }
+.chat-panel {
+flex: 1; border-radius: 12px; overflow: hidden;
+background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+box-shadow: 0 8px 40px rgba(3,8,20,0.6);
+}
+.chat-frame { width: 100%; height: 100%; border: none; background: white; }
+/* ===== SIDEBAR ===== /
+.sidebar {
+position: fixed; left: -280px; top: 0; height: 100%; width: 260px;
+background: rgba(17,24,39,0.97); padding: 18px; overflow-y: auto;
+border-right: 2px solid rgba(139,92,246,0.3);
+transition: left .3s ease; z-index: 200;
+}
+.sidebar.open { left: 0; }
+.sidebar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.sidebar h2 { color: #22D3EE; }
+.sidebar .tool-btn {
+width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 10px; border: none; text-align: left;
+background: linear-gradient(135deg, #8B5CF6, #22D3EE); color: white; cursor: pointer; font-size: 0.95rem;
+}
+.x-btn { background: none; border: none; color: #22D3EE; font-size: 1.2rem; cursor: pointer; }
+/* ===== TOOL POPUPS ===== /
+.tool {
+position: fixed; right: 18px; bottom: 18px; width: 340px; max-height: 80%;
+background: #0f2433; border-radius: 14px; padding: 16px; overflow: auto;
+box-shadow: 0 12px 40px rgba(2,6,18,0.8); border: 1px solid rgba(255,255,255,0.06);
+display: none; z-index: 210;
+}
+.tool.show { display: block; animation: slideUp .25s ease; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0 } to { transform: none; opacity: 1 } }
+.tool-head { display: flex; justify-content: space-between; align-items: center; }
+.row { display: flex; gap: 8px; margin-top: 8px; }
+.field {
+width: 100%; margin-top: 10px; padding: 10px; border-radius: 10px;
+border: 1px solid rgba(255,255,255,0.08); background: #071022; color: #E6EEF6; font-family: inherit;
+}
+label.lbl { display: block; font-size: 0.8rem; opacity: 0.8; margin-top: 10px; }
+label.lbl .field { margin-top: 4px; }
+.hint { opacity: .8; display: block; margin-top: 8px; font-size: 0.8rem; }
+#taskList { margin-top: 12px; list-style: none; max-height: 240px; overflow: auto; }
+#taskList li { background: #172634; margin-bottom: 8px; padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; word-break: break-word; }
+#taskList li button { background: #ff8da0; border: none; border-radius: 8px; padding: 6px 8px; cursor: pointer; color: white; flex-shrink: 0; }
+.link-card { background: #172b3a; padding: 12px; border-radius: 10px; margin-top: 8px; }
+.link-card a { color: #BFE9FF; font-weight: 600; text-decoration: none; }
+.cite-out { margin-top: 10px; font-size: 0.9rem; line-height: 1.5; }
+.cite-out p { margin-top: 8px; background: #071022; padding: 8px; border-radius: 8px; }
+/* ===== FLASHCARD MODAL ===== /
+.modal-backdrop {
+position: fixed; inset: 0; background: rgba(2,6,18,0.7);
+display: none; align-items: center; justify-content: center; z-index: 260; padding: 12px;
+}
+.modal-backdrop.show { display: flex; }
+.stack-modal {
+width: 100%; max-width: 640px; background: linear-gradient(180deg, #091322, #0d2540);
+border-radius: 14px; padding: 18px; box-shadow: 0 20px 60px rgba(3,8,20,0.8);
+}
+.stack-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.stack-area { position: relative; height: 300px; margin-top: 16px; display: flex; align-items: center; justify-content: center; perspective: 1200px; }
+.ghost-card, .flip-card { position: absolute; width: min(420px, 92%); height: 240px; border-radius: 12px; }
+.ghost-card { background: #12203a; box-shadow: 0 10px 30px rgba(2,6,18,0.5); }
+.ghost-card.g1 { transform: translateY(10px) scale(0.96); opacity: .7; }
+.ghost-card.g2 { transform: translateY(20px) scale(0.92); opacity: .4; }
+.flip-card { cursor: pointer; }
+.card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .5s ease; }
+.flip-card.flipped .card-inner { transform: rotateY(180deg); }
+.face {
+position: absolute; inset: 0; border-radius: 12px; padding: 20px;
+display: flex; align-items: center; justify-content: center; text-align: center;
+font-size: 1.3rem; font-weight: 700; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+box-shadow: 0 20px 50px rgba(2,6,18,0.6); overflow: auto;
+}
+.face.front { background: linear-gradient(90deg, #12203a, #19283f); }
+.face.back { background: linear-gradient(90deg, #0d314a, #0b2540); transform: rotateY(180deg); color: #BFE9FF; }
+.stack-controls { display: flex; gap: 8px; margin-top: 16px; justify-content: center; align-items: center; }
+.small-btn { background: transparent; color: #BFE9FF; border: 1px solid rgba(191,233,255,0.25); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+#cardCounter { min-width: 60px; text-align: center; font-size: 0.9rem; opacity: .85; }
+/* ===== AUTH MODAL ===== /
+.auth-box {
+background: linear-gradient(180deg, #071423, #0c2338); padding: 18px; border-radius: 12px;
+width: 100%; max-width: 360px; border: 1px solid rgba(255,255,255,0.06);
+}
+#authStatus { margin-top: 10px; color: #BFE9FF; font-size: 0.9rem; }
+/* ===== PHONES ===== /
+@media (max-width: 600px) {
+.container { padding: 8px; }
+.tool { width: auto; left: 8px; right: 8px; bottom: 8px; }
+.stack-area { height: 240px; }
+.ghost-card, .flip-card { height: 190px; }
+.face { font-size: 1.05rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
 </head>
 <body>
-
-  <!-- HEADER (title & short subtitle) -->
-  <header>
-    <div>
-  <h1 style="margin-left: 550px;">GHAYAS AI Chatbot 🤖</h1>
-  <div class="subtitle" style="margin-left: 560px; margin-top: -5px;">Smart • Simple • Speedy</div>
+<header>
+<button class="menu-btn" onclick="toggleSidebar()" aria-label="Open tools">☰</button>
+<div class="title">
+<h1>GHAYAS AI Chatbot 🤖</h1>
+<div class="subtitle">Smart • Simple • Speedy</div>
 </div>
+<div class="controls">
+<button id="chatBtn" class="btn active" onclick="showChat()">Chat</button>
+<button id="calBtn" class="btn" onclick="showCalendar()">Calendar</button>
+<button id="authBtn" class="btn" onclick="authBtnClick()">Sign in / Sign up</button>
+</div>
+</header>
+<div class="container">
+<div class="chat-panel">
+<iframe id="mainFrame" class="chat-frame" title="Chat"
+src="https://www.chatbase.co/chatbot-iframe/lXH4cGl6aJtp_bEFqlEcc"
+allow="microphone; clipboard-write"></iframe>
+</div>
+</div>
+<aside id="sidebar" class="sidebar">
+<div class="sidebar-head">
+<h2>Tools</h2>
+<button class="x-btn" onclick="toggleSidebar(false)" aria-label="Close tools">✕</button>
+</div>
+<button class="tool-btn" onclick="openTool('todo')">📝 To-do list</button>
+<button class="tool-btn" onclick="openTool('timer')">⏱ Timer</button>
+<button class="tool-btn" onclick="openTool('converter')">⚖️ Unit converter</button>
+<button class="tool-btn" onclick="openTool('links')">🌐 Links</button>
+<button class="tool-btn" onclick="openTool('citation')">🧾 Citation builder</button>
+<button class="tool-btn" onclick="openTool('speech')">🗣️ Speech to text</button>
+<button class="tool-btn" onclick="openTool('tts')">🔊 Text to speech</button>
+<button class="tool-btn" onclick="openTool('flash')">🧠 Flashcards</button>
+</aside>
+<!-- TO-DO -->
+<div id="todo" class="tool" role="dialog" aria-label="To-do list">
+<div class="tool-head"><h3>To-do list</h3><button class="x-btn" onclick="closeTool('todo')">✕</button></div>
+<input id="taskInput" class="field" placeholder="Add a task" onkeydown="if(event.key==='Enter') addTask()" />
+<div class="row">
+<button class="btn" onclick="addTask()">Add</button>
+<button class="btn ghost" onclick="clearTasks()">Clear all</button>
+</div>
+<ul id="taskList"></ul>
+</div>
+<!-- TIMER -->
+<div id="timer" class="tool" role="dialog" aria-label="Timer">
+<div class="tool-head"><h3>Timer</h3><button class="x-btn" onclick="closeTool('timer')">✕</button></div>
+<div class="row">
+<input id="timerMin" class="field" type="number" min="0" placeholder="Min" />
+<input id="timerSec" class="field" type="number" min="0" max="59" placeholder="Sec" />
+</div>
+<div class="row">
+<button class="btn" onclick="startTimer()">Start</button>
+<button class="btn ghost" onclick="pauseTimer()">Pause</button>
+<button class="btn ghost" onclick="resetTimer()">Reset</button>
+</div>
+<p id="timerDisplay" style="margin-top:12px; font-weight:700; font-size:1.6rem;">00:00</p>
+</div>
+<!-- UNIT CONVERTER -->
+<div id="converter" class="tool" role="dialog" aria-label="Unit converter">
+<div class="tool-head"><h3>Unit converter</h3><button class="x-btn" onclick="closeTool('converter')">✕</button></div>
+<select id="unitCategory" class="field" onchange="populateUnits()">
+<option value="length">Length</option>
+<option value="weight">Weight</option>
+<option value="volume">Volume</option>
+<option value="temperature">Temperature</option>
+</select>
+<input id="unitValue" class="field" type="number" placeholder="Value" />
+<div class="row">
+<select id="unitFrom" class="field"></select>
+<select id="unitTo" class="field"></select>
+</div>
+<button class="btn" style="margin-top:10px;" onclick="convertUnits()">Convert</button>
+<div id="unitResult" style="margin-top:12px; font-weight:700;"></div>
+</div>
+<!-- LINKS -->
+<div id="links" class="tool" role="dialog" aria-label="Links">
+<div class="tool-head"><h3>Useful links</h3><button class="x-btn" onclick="closeTool('links')">✕</button></div>
+<div class="link-card"><a href="https://brownschool.org/" target="_blank" rel="noopener">🏫 Brown School</a></div>
+<div class="link-card"><a href="https://sunysccc.edu/" target="_blank" rel="noopener">🎓 SUNY SCCC</a></div>
+<div class="link-card"><a href="https://www.wikipedia.org/" target="_blank" rel="noopener">📘 Wikipedia</a></div>
+<div class="link-card"><a href="https://www.khanacademy.org/" target="_blank" rel="noopener">📚 Khan Academy</a></div>
+</div>
+<!-- CITATION BUILDER -->
+<div id="citation" class="tool" role="dialog" aria-label="Citation builder">
+<div class="tool-head"><h3>Citation builder</h3><button class="x-btn" onclick="closeTool('citation')">✕</button></div>
+<label class="lbl">Author first name<input id="citeFirst" class="field" /></label>
+<label class="lbl">Author last name<input id="citeLast" class="field" /></label>
+<label class="lbl">Page / article title<input id="citeTitle" class="field" /></label>
+<label class="lbl">Website name<input id="citeSite" class="field" placeholder="e.g. BBC News" /></label>
+<label class="lbl">Date published<input id="citeDate" class="field" type="date" /></label>
+<label class="lbl">URL<input id="citeUrl" class="field" type="url" /></label>
+<button class="btn" style="margin-top:10px;" onclick="generateCitation()">Generate</button>
+<div class="cite-out">
+<p><strong>MLA:</strong> <span id="mlaCitation"></span></p>
+<p><strong>APA:</strong> <span id="apaCitation"></span></p>
+<p><strong>Chicago:</strong> <span id="chiCitation"></span></p>
+</div>
+</div>
+<!-- SPEECH TO TEXT -->
+<div id="speech" class="tool" role="dialog" aria-label="Speech to text">
+<div class="tool-head"><h3>Speech to text</h3><button class="x-btn" onclick="closeTool('speech')">✕</button></div>
+<textarea id="speechOutput" class="field" rows="5" placeholder="Your speech will appear here..."></textarea>
+<div class="row">
+<button class="btn" onclick="startSpeech()">Start dictation</button>
+<button class="btn ghost" onclick="stopSpeech()">Stop</button>
+</div>
+<small class="hint" id="speechHint">Works in Chrome/Edge. Allow mic access when asked.</small>
+</div>
+<!-- TEXT TO SPEECH -->
+<div id="tts" class="tool" role="dialog" aria-label="Text to speech">
+<div class="tool-head"><h3>Text to speech</h3><button class="x-btn" onclick="closeTool('tts')">✕</button></div>
+<textarea id="ttsInput" class="field" rows="4" placeholder="Type text to read..."></textarea>
+<select id="voiceSelect" class="field"></select>
+<label class="lbl">Speed: <span id="rateLbl">1.0</span>x
+<input id="ttsRate" type="range" min="0.6" max="1.6" step="0.1" value="1" style="width:100%"
+oninput="document.getElementById('rateLbl').textContent=Number(this.value).toFixed(1)" />
+</label>
+<div class="row">
+<button class="btn" onclick="speakTTS()">Read aloud</button>
+<button class="btn ghost" onclick="speechSynthesis.cancel()">Stop</button>
+</div>
+</div>
+<!-- FLASHCARDS -->
+<div id="flash" class="tool" role="dialog" aria-label="Flashcards">
+<div class="tool-head"><h3>Flashcards</h3><button class="x-btn" onclick="closeTool('flash')">✕</button></div>
+<textarea id="flashInput" class="field" rows="6" placeholder="One card per line, like:&#10;Capital of France: Paris&#10;2 + 2: 4"></textarea>
+<button class="btn" style="margin-top:8px;" onclick="openFlashStack()">Study cards</button>
+<small class="hint" id="flashHint"></small>
+</div>
+<div id="stackBackdrop" class="modal-backdrop" onclick="if(event.target===this) closeFlashStack()">
+<div class="stack-modal" role="dialog" aria-label="Flashcards study mode">
+<div class="stack-header">
+<strong>Study mode</strong>
+<button class="small-btn" onclick="closeFlashStack()">Close</button>
+</div>
+<div class="stack-area" id="stackArea"></div>
+<div class="stack-controls">
+<button class="small-btn" onclick="prevCard()">← Prev</button>
+<button class="small-btn" onclick="flipTop()">Flip</button>
+<span id="cardCounter"></span>
+<button class="small-btn" onclick="nextCard()">Next →</button>
+</div>
+<small class="hint" style="text-align:center;">Tip: tap the card or press Space to flip, arrow keys to move.</small>
+</div>
+</div>
+<!-- AUTH -->
+<div id="authModal" class="modal-backdrop" onclick="if(event.target===this) closeAuth()">
+<div class="auth-box" role="dialog" aria-label="Sign in or sign up">
+<div class="tool-head">
+<strong id="authTitle">Sign up</strong>
+<button class="x-btn" onclick="closeAuth()">✕</button>
+</div>
+<input id="authEmail" class="field" type="email" placeholder="Email" autocomplete="email" />
+<input id="authPass" class="field" type="password" placeholder="Password (6+ characters)" autocomplete="current-password" />
+<div class="row">
+<button class="btn" id="authActionBtn" onclick="submitAuth()">Sign up</button>
+<button class="btn ghost" id="authSwitchBtn" onclick="toggleAuthMode()">I have an account</button>
+</div>
+<div id="authStatus"></div>
+</div>
+</div>
+<!-- ===== UI SCRIPT (works even if Firebase fails) ===== -->
+<script>
+const $ = (s) => document.querySelector(s);
+const CHAT_URL = 'https://www.chatbase.co/chatbot-iframe/lXH4cGl6aJtp_bEFqlEcc';
+// Swap this for your school's Google Calendar embed link
+const CAL_URL = 'https://calendar.google.com/calendar/embed?src=en.usa%23holiday%40group.v.calendar.google.com&ctz=America%2FNew_York';
+const store = {
+get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+// ----- sidebar & views -----
+function toggleSidebar(force) {
+const sb = $('#sidebar');
+typeof force === 'boolean' ? sb.classList.toggle('open', force) : sb.classList.toggle('open');
+}
+function showChat() {
+if ($('#mainFrame').src !== CHAT_URL) $('#mainFrame').src = CHAT_URL;
+$('#chatBtn').classList.add('active'); $('#calBtn').classList.remove('active');
+}
+function showCalendar() {
+$('#mainFrame').src = CAL_URL;
+$('#calBtn').classList.add('active'); $('#chatBtn').classList.remove('active');
+}
+function openTool(id) {
+document.querySelectorAll('.tool').forEach(t => t.classList.remove('show'));
+document.getElementById(id).classList.add('show');
+toggleSidebar(false);
+}
+function closeTool(id) { document.getElementById(id).classList.remove('show'); }
+// ----- to-do -----
+let tasks = store.get('ghayas_tasks', []);
+function renderTasks() {
+const ul = $('#taskList'); ul.innerHTML = '';
+tasks.forEach((t, i) => {
+const li = document.createElement('li');
+const span = document.createElement('span'); span.textContent = t;
+const b = document.createElement('button'); b.textContent = '✕'; b.setAttribute('aria-label', 'Delete task');
+b.onclick = () => { tasks.splice(i, 1); store.set('ghayas_tasks', tasks); renderTasks(); };
+li.append(span, b); ul.appendChild(li);
+});
+}
+function addTask() {
+const v = $('#taskInput').value.trim(); if (!v) return;
+tasks.push(v); store.set('ghayas_tasks', tasks); $('#taskInput').value = ''; renderTasks();
+}
+function clearTasks() { if (tasks.length && confirm('Clear all tasks?')) { tasks = []; store.set('ghayas_tasks', tasks); renderTasks(); } }
+renderTasks();
+// ----- timer -----
+let timerInterval = null, timerRemaining = 0;
+function updateTimerDisplay() {
+const mm = String(Math.floor(timerRemaining / 60)).padStart(2, '0');
+const ss = String(timerRemaining % 60).padStart(2, '0');
+$('#timerDisplay').textContent = `${mm}:${ss}`;
+}
+function startTimer() {
+if (timerInterval) return;
+if (timerRemaining <= 0) {
+const m = parseInt($('#timerMin').value) || 0, s = parseInt($('#timerSec').value) || 0;
+timerRemaining = m * 60 + s;
+if (timerRemaining <= 0) { $('#timerDisplay').textContent = 'Enter a time first'; return; }
+}
+updateTimerDisplay();
+timerInterval = setInterval(() => {
+timerRemaining--;
+if (timerRemaining <= 0) { pauseTimer(); timerRemaining = 0; playBeep(); $('#timerDisplay').textContent = "⏰ Time's up!"; }
+else updateTimerDisplay();
+}, 1000);
+}
+function pauseTimer() { clearInterval(timerInterval); timerInterval = null; }
+function resetTimer() { pauseTimer(); timerRemaining = 0; $('#timerMin').value = ''; $('#timerSec').value = ''; updateTimerDisplay(); }
+function playBeep() {
+try {
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+[0, 0.4, 0.8].forEach(t => {
+const o = ctx.createOscillator(), g = ctx.createGain();
+o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+g.gain.setValueAtTime(0.2, ctx.currentTime + t);
+g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.3);
+o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.3);
+});
+} catch (e) { console.warn('Audio not available', e); }
+}
+// ----- unit converter -----
+const UNITS = {
+length: { Meter: 1, Kilometer: 1000, Centimeter: 0.01, Millimeter: 0.001, Inch: 0.0254, Foot: 0.3048, Yard: 0.9144, Mile: 1609.344 },
+weight: { Kilogram: 1, Gram: 0.001, Pound: 0.45359237, Ounce: 0.028349523 },
+volume: { Liter: 1, Milliliter: 0.001, 'Gallon (US)': 3.78541, 'Cup (US)': 0.236588, 'Cubic Meter': 1000 },
+temperature: { Celsius: 'C', Fahrenheit: 'F', Kelvin: 'K' }
+};
+function populateUnits() {
+const cat = $('#unitCategory').value, from = $('#unitFrom'), to = $('#unitTo');
+from.innerHTML = ''; to.innerHTML = '';
+Object.keys(UNITS[cat]).forEach(k => { from.add(new Option(k, k)); to.add(new Option(k, k)); });
+if (to.options.length > 1) to.selectedIndex = 1;
+$('#unitResult').textContent = '';
+}
+function toCelsius(v, u) { return u === 'Celsius' ? v : u === 'Fahrenheit' ? (v - 32) * 5 / 9 : v - 273.15; }
+function fromCelsius(c, u) { return u === 'Celsius' ? c : u === 'Fahrenheit' ? c * 9 / 5 + 32 : c + 273.15; }
+function convertUnits() {
+const cat = $('#unitCategory').value, v = parseFloat($('#unitValue').value);
+if (isNaN(v)) { $('#unitResult').textContent = 'Enter a number.'; return; }
+const f = $('#unitFrom').value, t = $('#unitTo').value;
+const res = cat === 'temperature' ? fromCelsius(toCelsius(v, f), t) : v * UNITS[cat][f] / UNITS[cat][t];
+$('#unitResult').textContent = `${v} ${f} = ${parseFloat(res.toFixed(4))} ${t}`;
+}
+populateUnits();
+// ----- citation builder -----
+const esc = (s) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MLA_MON = ['Jan.','Feb.','Mar.','Apr.','May','June','July','Aug.','Sept.','Oct.','Nov.','Dec.'];
+function generateCitation() {
+const first = $('#citeFirst').value.trim(), last = $('#citeLast').value.trim();
+const title = $('#citeTitle').value.trim(), site = $('#citeSite').value.trim();
+const url = $('#citeUrl').value.trim(), dateStr = $('#citeDate').value;
+if (!title || !url) { $('#mlaCitation').textContent = 'Add at least a title and URL.'; $('#apaCitation').textContent = ''; $('#chiCitation').textContent = ''; return; }
+let y = '', m = -1, d = '';
+if (dateStr) { const p = dateStr.split('-'); y = p[0]; m = parseInt(p[1]) - 1; d = parseInt(p[2]); }
+const now = new Date();
+const accessed = `${now.getDate()} ${MLA_MON[now.getMonth()]} ${now.getFullYear()}`;
+const T = esc(title), S = esc(site), U = esc(url);
+// MLA 9
+const mlaAuth = last ? `${esc(last)}${first ? ', ' + esc(first) : ''}. ` : '';
+const mlaDate = y ? `${d} ${MLA_MON[m]} ${y}, ` : '';
+$('#mlaCitation').innerHTML = `${mlaAuth}"${T}." ${S ? `<i>${S}</i>, ` : ''}${mlaDate}${U}. Accessed ${accessed}.`;
+// APA 7
+const apaAuth = last ? `${esc(last)}${first ? ', ' + esc(first[0]) + '.' : ''}` : '';
+const apaDate = y ? `(${y}, ${MONTHS[m]} ${d})` : '(n.d.)';
+$('#apaCitation').innerHTML = apaAuth
+? `${apaAuth} ${apaDate}. <i>${T}</i>. ${S ? S + '. ' : ''}${U}`
+: `<i>${T}</i>. ${apaDate}. ${S ? S + '. ' : ''}${U}`;
+// Chicago
+const chiAuth = last ? `${esc(last)}${first ? ', ' + esc(first) : ''}. ` : '';
+const chiDate = y ? `${MONTHS[m]} ${d}, ${y}. ` : '';
+$('#chiCitation').innerHTML = `${chiAuth}"${T}." ${S ? S + '. ' : ''}${chiDate}${U}.`;
+}
+// ----- speech to text -----
+let dictRec = null, finalText = '';
+function startSpeech() {
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) { $('#speechHint').textContent = "This browser doesn't support dictation. Try Chrome or Edge."; return; }
+if (dictRec) return;
+finalText = $('#speechOutput').value ? $('#speechOutput').value.trim() + ' ' : '';
+dictRec = new SR(); dictRec.continuous = true; dictRec.interimResults = true; dictRec.lang = 'en-US';
+dictRec.onresult = (e) => {
+let interim = '';
+for (let i = e.resultIndex; i < e.results.length; i++) {
+if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
+else interim += e.results[i][0].transcript;
+}
+$('#speechOutput').value = finalText + interim;
+};
+dictRec.onerror = (e) => { $('#speechHint').textContent = 'Mic error: ' + e.error; };
+dictRec.onend = () => { dictRec = null; $('#speechHint').textContent = 'Stopped.'; };
+dictRec.start(); $('#speechHint').textContent = '🎙 Listening...';
+}
+function stopSpeech() { if (dictRec) dictRec.stop(); }
+// ----- text to speech -----
+function populateVoices() {
+const sel = $('#voiceSelect'), current = sel.value; sel.innerHTML = '';
+speechSynthesis.getVoices().forEach(v => sel.add(new Option(`${v.name} (${v.lang})`, v.name)));
+if (current) sel.value = current;
+}
+if ('speechSynthesis' in window) { speechSynthesis.onvoiceschanged = populateVoices; populateVoices(); }
+function speakTTS() {
+const txt = $('#ttsInput').value.trim(); if (!txt) return;
+speechSynthesis.cancel();
+const u = new SpeechSynthesisUtterance(txt);
+u.rate = parseFloat($('#ttsRate').value) || 1;
+const v = speechSynthesis.getVoices().find(x => x.name === $('#voiceSelect').value);
+if (v) u.voice = v;
+speechSynthesis.speak(u);
+}
+// ----- flashcards -----
+let flashCards = [], currentIndex = 0;
+...
 
+[Message clipped]  View entire message
 
-    <!-- floating controls: Chat, Calendar, Sign In -->
-    <div class="floating">
-      <button class="btn" onclick="showChat()">Chat</button> <!-- open chat iframe -->
-      <button class="btn" onclick="showCalendar()">Calendar</button> <!-- open calendar iframe -->
-      <button id="authBtn" class="btn" onclick="openAuth()">Sign In / Sign Up</button> <!-- auth modal trigger -->
-    </div>
-  </header>
-
-  <!-- MENU button toggles sidebar -->
-  <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-
-  <!-- MAIN container holding chat area -->
-  <div class="container">
-    <div class="chat-panel">
-      <!-- chat iframe area -->
-      <iframe id="mainFrame" class="chat-frame" src="https://www.chatbase.co/chatbot-iframe/lXH4cGl6aJtp_bEFqlEcc"></iframe>
-    </div>
-
-    <!-- sidebar with tool buttons -->
-    <aside id="sidebar" class="sidebar" aria-hidden="true">
-      <h2>Tools</h2>
-      <button onclick="openTool('todo')">📝 To-Do List</button>
-      <button onclick="openTool('timer')">⏱ Timer</button>
-      <button onclick="openTool('converter')">⚖️ Unit Converter</button>
-      <button onclick="openTool('links')">🌐 Links</button>
-      <button onclick="openTool('citation')">🧾 Citation Builder</button>
-      <button onclick="openTool('speech')">🗣️ Speech-to-Text</button>
-      <button onclick="openTool('tts')">🔊 Text-to-Speech</button>
-      <button onclick="openTool('flash')">🧠 Flashcards</button>
-    </aside>
-  </div>
-
-  <!-- ==========================
-       TOOL: TO-DO (right-bottom)
-       one-line comments above each major DOM block
-       ========================== -->
-  <div id="todo" class="tool" role="dialog" aria-hidden="true">
-    <button class="close" onclick="closeTool('todo')">✕</button> <!-- close button -->
-    <h3>To-Do List</h3> <!-- tool title -->
-    <input id="taskInput" class="field" placeholder="Add a task" /> <!-- task input -->
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <button class="btn" onclick="addTask()">Add</button> <!-- add task -->
-      <button class="btn ghost" onclick="clearTasks()">Clear All</button> <!-- clear tasks -->
-    </div>
-    <ul id="taskList"></ul> <!-- tasks render container -->
-  </div>
-
-  <!-- ==========================
-       TOOL: TIMER
-       ========================== -->
-  <div id="timer" class="tool" role="dialog" aria-hidden="true">
-    <button class="close" onclick="closeTool('timer')">✕</button>
-    <h3>Timer</h3>
-    <input id="timerInput" class="field" type="number" placeholder="Seconds" />
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <button class="btn" onclick="startTimer()">Start</button>
-      <button class="btn ghost" onclick="stopTimer()">Stop</button>
-      <button class="btn ghost" onclick="resetTimer()">Reset</button>
-    </div>
-    <p id="timerDisplay" style="margin-top:12px; font-weight:700;"></p>
-  </div>
-
-  <!-- ==========================
-       TOOL: UNIT CONVERTER
-       ========================== -->
-  <div id="converter" class="tool" role="dialog" aria-hidden="true">
-    <button class="close" onclick="closeTool('converter')">✕</button>
-    <h3>Unit Converter</h3>
-    <select id="unitCategory" class="field" onchange="populateUnits()">
-      <option value="length">Length</option>
-      <option value="weight">Weight</option>
-      <option value="volume">Volume</option>
-    </select>
-    <input id="unitValue" class="field" type="number" placeholder="Value" />
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <select id="unitFrom" class="field" style="flex:1"></select>
-      <select id="unitTo" class="field" style="flex:1"></select>
-    </div>
-    <button class="btn" style="margin-top:10px;" onclick="convertUnits()">Convert</button>
-    <div id="unitResult" style="margin-top:12px; font-weight:700;"></div>
-  </div>
-
-  <!-- ==========================
-       TOOL: LINKS
-       ========================== -->
-  <div id="links" class="tool" role="dialog" aria-hidden="true">
-    <button class="close" onclick="closeTool('links')">✕</button>
-    <h3>Useful Links</h3>
-    <div class="link-card"><a href="https://brownschool.org/" target="_blank">🏫 Brown School</a></div>
-    <div class="link-card"><a href="https://sunysccc.edu/" target="_blank">🎓 SUNY SCCC</a></div>
-    <div class="link-card"><a href="https://www.wikipedia.org/" target="_blank">📘 Wikipedia</a></div>
-    <div class="link-card"><a href="https://chat.openai.com/" target="_blank">🤖 ChatGPT</a></div>
-  </div>
-
-  <!-- ==========================
-       TOOL: CITATION BUILDER
-       ========================== -->
-  <div id="citation" class="tool" role="dialog" aria-hidden="true">
-    <button class="close" onclick="closeTool('citation')">✕</button>
-    <h3>Citation Builder</h3>
-    <input id="citationInput" class="field" placeholder="Paste a link" />
-    <button class="btn" style="margin-top:10px;" onclick="generateCitation()">Generate</button>
-    <p style="margin-top:10px;"><strong>MLA:</strong> <span id="mlaCitation"></span></p>
-    <p><strong>APA:</strong> <span id="apaCitation"></span></p>
-    <p><strong>Chicago:</strong> <span id="chiCitation"></span></p>
-  </div>
-
-  <!-- ==========================
-       TOOL: SPEECH-TO-TEXT
-       ========================== -->
-  <div id="speech" class="tool" role="dialog" aria-hidden="true">
-    <button class="close" onclick="closeTool('speech')">✕</button>
-    <h3>Speech-to-Text</h3>
-    <textarea id="speechOutput" class="field" rows="5" placeholder="Your speech will appear here..."></textarea>
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <button class="btn" onclick="startSpeech()">Start Dictation</button>
-      <button class="btn ghost" onclick="stopSpeech()">Stop</button>
-    </div>
-    <small style="opacity:.85; display:block; margin-top:8px;">Works best in Chrome/Edge with mic permission.</small>
-  </div>
-
-  <!-- ==========================
-       TOOL: TEXT-TO-SPEECH
-       ========================== -->
-  <div id="tts" class="tool" role="dialog" aria-hidden="true">
-    <button class="close" onclick="closeTool('tts')">✕</button>
-    <h3>Text-to-Speech</h3>
-    <textarea id="ttsInput" class="field" rows="4" placeholder="Type text to read..."></textarea>
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <select id="voiceSelect" class="field" style="flex:1"></select>
-      <input id="ttsRate" type="number" min="0.6" max="1.6" step="0.1" value="1" class="field" style="width:96px;" />
-    </div>
-    <button class="btn" style="margin-top:8px;" onclick="speakTTS()">Read Aloud</button>
-  </div>
-
-  <!-- ==========================
-       TOOL: FLASHCARDS (invokes stack modal)
-       ========================== -->
-  <div id="flash" class="tool" role="dialog" aria-hidden="true">
-    <button class="close" onclick="closeTool('flash')">✕</button>
-    <h3>Flashcards</h3>
-    <textarea id="flashInput" class="field" rows="6" placeholder="Enter Question:Answer per line"></textarea>
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <button class="btn" onclick="openFlashStack()">Open Stack</button>
-      <button class="btn ghost" onclick="generateFlashcardsPreview()">Preview Cards</button>
-    </div>
-    <div id="flashPreview" style="margin-top:12px;"></div>
-  </div>
-
-  <!-- ==========================
-       FLASHCARD STACK MODAL (center popup)
-       ========================== -->
-  <div id="stackBackdrop" class="modal-backdrop" aria-hidden="true">
-    <div class="stack-modal" role="dialog" aria-label="Flashcards stack">
-      <div class="stack-header">
-        <div style="font-weight:700;">Flashcards — Study Mode</div>
-        <div>
-          <button class="small-btn" onclick="closeFlashStack()">Close</button>
-        </div>
-      </div>
-
-      <div class="stack-area" id="stackArea">
-        <!-- cards will be created here dynamically -->
-      </div>
-
-      <div class="stack-controls">
-        <button class="small-btn" onclick="prevCard()">← Prev</button>
-        <button class="small-btn" onclick="flipTop()">Flip</button>
-        <button class="small-btn" onclick="nextCard()">Next →</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================
-       AUTH MODAL (center popup) with firebase logic
-       ========================== -->
-  <div id="authModal" class="auth-modal" aria-hidden="true">
-    <div class="auth-box" role="dialog" aria-label="Sign in or sign up">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <strong id="authTitle">Sign Up</strong>
-        <button class="small-btn" onclick="closeAuth()">Close</button>
-      </div>
-
-      <input id="authEmail" class="field" type="email" placeholder="Email" />
-      <input id="authPass" class="field" type="password" placeholder="Password (6+ chars)" />
-      <div style="display:flex; gap:8px; margin-top:10px;">
-        <button class="btn" id="authActionBtn" onclick="submitAuth()">Sign Up</button>
-        <button class="btn ghost" onclick="toggleAuthMode()">Switch to Login</button>
-      </div>
-
-      <div id="authStatus" style="margin-top:10px; color:#BFE9FF; font-size:0.95rem;"></div>
-    </div>
-  </div>
-
-  <!-- ============== SCRIPTS: UI logic + features + firebase ============== -->
-  <script type="module">
-    /***** ===== FIREBASE SETUP (module imports) =====
-          one-line comments explain each import or config *****/
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js"; // firebase core
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js"; // auth
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js"; // realtime db
-
-    // Firebase config you provided earlier — keep if you want real auth
-    const firebaseConfig = {
-      apiKey: "AIzaSyA2z-LpiszeaST7bphmMGHRlpZitBowXQA",
-      authDomain: "ghayas-ai-chatbot.firebaseapp.com",
-      projectId: "ghayas-ai-chatbot",
-      storageBucket: "ghayas-ai-chatbot.appspot.com",
-      messagingSenderId: "463866463891",
-      appId: "1:463866463891:web:1661e23687a80c0dd76f66",
-      measurementId: "G-75CDWKK4H5"
-    };
-
-    // initialize firebase app and helpers
-    const app = initializeApp(firebaseConfig); // init firebase
-    const auth = getAuth(app); // firebase auth instance
-    const db = getDatabase(app); // firebase realtime DB instance
-
-    /***** ===== UI: simple helpers ===== */
-    const $ = (s) => document.querySelector(s); // DOM shortcut
-
-    // Sidebar toggle
-    function toggleSidebar(){ $('#sidebar').classList.toggle('open'); } // show/hide sidebar
-    window.toggleSidebar = toggleSidebar;
-
-    // show chat iframe
-    function showChat(){ $('#mainFrame').src = 'https://www.chatbase.co/chatbot-iframe/lXH4cGl6aJtp_bEFqlEcc'; } // open chat
-    window.showChat = showChat;
-
-    // show calendar iframe
-    function showCalendar(){ $('#mainFrame').src = 'https://calendar.google.com/calendar/embed?src=en.indian%23holiday%40group.v.calendar.google.com'; } // open calendar
-    window.showCalendar = showCalendar;
-
-    // open a tool popup; hides other tools
-    function openTool(id){
-      document.querySelectorAll('.tool').forEach(t => t.classList.remove('show'));
-      document.getElementById(id).classList.add('show');
-    }
-    window.openTool = openTool;
-
-    // close a particular tool
-    function closeTool(id){
-      if (id) document.getElementById(id).classList.remove('show');
-      else document.querySelectorAll('.tool').forEach(t => t.classList.remove('show'));
-    }
-    window.closeTool = closeTool;
-
-    /***** ===== TO-DO list functions (store in memory only) ===== */
-    // Add a new task DOM element
-    function addTask(){
-      const v = $('#taskInput').value.trim(); if(!v) return;
-      const li = document.createElement('li'); li.textContent = v;
-      const btn = document.createElement('button'); btn.textContent='✕'; btn.onclick = ()=> li.remove();
-      li.appendChild(btn); $('#taskList').appendChild(li); $('#taskInput').value='';
-    }
-    window.addTask = addTask;
-
-    // Clear all tasks
-    function clearTasks(){ $('#taskList').innerHTML=''; }
-    window.clearTasks = clearTasks;
-
-    /***** ===== TIMER functions (start/stop/reset) ===== */
-    let timerInterval = null, timerRemaining = 0;
-    function startTimer(){
-      const sec = parseInt($('#timerInput').value); if(isNaN(sec) || sec <= 0) return alert('Enter seconds.');
-      timerRemaining = sec; updateTimerDisplay();
-      if (timerInterval) clearInterval(timerInterval);
-      timerInterval = setInterval(()=> {
-        timerRemaining--; if (timerRemaining <= 0){ stopTimer(); playBeep(); $('#timerDisplay').textContent = "⏰ Time's up!"; }
-        else updateTimerDisplay();
-      }, 1000);
-    }
-    function stopTimer(){ if(timerInterval) clearInterval(timerInterval); timerInterval=null; }
-    function resetTimer(){ stopTimer(); timerRemaining = 0; $('#timerDisplay').textContent=''; $('#timerInput').value=''; }
-    function updateTimerDisplay(){ const mm = Math.floor(timerRemaining/60).toString().padStart(2,'0'); const ss = (timerRemaining%60).toString().padStart(2,'0'); $('#timerDisplay').textContent = `${mm}:${ss}`; }
-    function playBeep(){ try{ const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.01); o.start(); setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime+0.2); o.stop(ctx.currentTime+0.3); }, 300);}catch(e){console.warn('Audio not available',e);} }
-    window.startTimer = startTimer; window.stopTimer = stopTimer; window.resetTimer = resetTimer;
-
-    /***** ===== UNIT CONVERTER ===== */
-    const UNITS = {
-      length: { Meter:1, Kilometer:1000, Centimeter:0.01, Inch:0.0254, Foot:0.3048, Mile:1609.34 },
-      weight: { Kilogram:1, Gram:0.001, Pound:0.453592, Ounce:0.0283495 },
-      volume: { Liter:1, Milliliter:0.001, Gallon:3.78541, 'Cubic Meter':1000 }
-    };
-    function populateUnits(){
-      const cat = $('#unitCategory').value; const from = $('#unitFrom'); const to = $('#unitTo'); from.innerHTML=''; to.innerHTML='';
-      Object.keys(UNITS[cat]).forEach(k => { const o1=document.createElement('option'); o1.value=k; o1.text=k; from.appendChild(o1); const o2=o1.cloneNode(true); to.appendChild(o2); });
-    }
-    function convertUnits(){
-      const cat = $('#unitCategory').value; const v = parseFloat($('#unitValue').value); if(isNaN(v)) return alert('Enter a number.');
-      const f = $('#unitFrom').value; const t = $('#unitTo').value; const res = v * UNITS[cat][f] / UNITS[cat][t];
-      $('#unitResult').textContent = `${v} ${f} = ${res.toFixed(6)} ${t}`;
-    }
-    window.populateUnits = populateUnits; window.convertUnits = convertUnits;
-    populateUnits(); // initialize unit selects
-
-    /***** ===== CITATION builder (best-effort) ===== */
-    function generateCitation(){
-      const link = $('#citationInput').value.trim(); if(!link) return alert('Paste a link.');
-      const year = (new Date()).getFullYear();
-      $('#mlaCitation').textContent = `Author. "${link}" Website, ${year}, ${link}.`;
-      $('#apaCitation').textContent = `Author. (${year}). ${link}. Website. ${link}`;
-      $('#chiCitation').textContent = `Author. "${link}". Website. ${year}. ${link}.`;
-    }
-    window.generateCitation = generateCitation;
-
-    /***** ===== SPEECH-TO-TEXT (dictation) ===== */
-    let dictRec = null;
-    function startSpeech(){
-      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition; if(!SpeechRec) return alert('Speech recognition not supported in this browser.');
-      dictRec = new SpeechRec(); dictRec.continuous = true; dictRec.interimResults = true; dictRec.lang = 'en-US';
-      dictRec.onresult = (e) => { let txt=''; for(let i=e.resultIndex;i<e.results.length;i++){ txt += e.results[i][0].transcript; } $('#speechOutput').value = txt; };
-      dictRec.onend = ()=> { dictRec = null; };
-      dictRec.start();
-    }
-    function stopSpeech(){ if(dictRec) dictRec.stop(); dictRec = null; }
-    window.startSpeech = startSpeech; window.stopSpeech = stopSpeech;
-
-    /***** ===== TEXT-TO-SPEECH (smoother settings) ===== */
-    function populateVoices(){
-      const sel = $('#voiceSelect'); sel.innerHTML=''; const vs = speechSynthesis.getVoices();
-      vs.forEach(v => { const o = document.createElement('option'); o.value = v.name; o.textContent = `${v.name} (${v.lang})`; sel.appendChild(o); });
-    }
-    speechSynthesis.onvoiceschanged = populateVoices; populateVoices();
-    function speakTTS(){
-      const txt = $('#ttsInput').value.trim(); if(!txt) return alert('Type something first.');
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(txt);
-      u.rate = parseFloat($('#ttsRate').value) || 1.0; // smooth rate default 1.0
-      u.pitch = 1.0; // stable pitch
-      u.volume = 1.0; // full volume
-      const sel = $('#voiceSelect').value;
-      const vs = speechSynthesis.getVoices();
-      const chosen = vs.find(x=>x.name===sel);
-      if(chosen) u.voice = chosen;
-      speechSynthesis.speak(u);
-    }
-    window.speakTTS = speakTTS;
-
-    /***** ===== FLASHCARDS (stack modal) =====
-          - generateFlashcardsPreview creates small preview cards in flash tool
-          - openFlashStack builds a 3D stack modal and shows first card
-    *****/
-    let flashCards = []; // holds cards {q,a}
-    function generateFlashcardsPreview(){
-      const raw = $('#flashInput').value.trim(); if(!raw) return alert('Enter Q:A lines.');
-      const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean).slice(0,10);
-      flashCards = [];
-      const preview = $('#flashPreview'); preview.innerHTML='';
-      lines.forEach(line => {
-        const parts = line.split(':'); if(parts.length < 2) return;
-        const q = parts.shift().trim(); const a = parts.join(':').trim();
-        flashCards.push({q,a});
-        const d = document.createElement('div'); d.className='flashcard'; d.textContent = q; d.onclick = ()=> alert(a); preview.appendChild(d);
-      });
-      if(!flashCards.length) return alert('No valid Q:A lines found.');
-    }
-    window.generateFlashcardsPreview = generateFlashcardsPreview;
-
-    // Open center flash stack modal with animated stack
-    function openFlashStack(){
-      // build flashCards if not already previewed
-      if(flashCards.length === 0) generateFlashcardsPreview();
-      if(flashCards.length === 0) return;
-      const backdrop = $('#stackBackdrop'); const area = $('#stackArea'); area.innerHTML='';
-      // create card-stack elements with slight offsets for depth
-      for(let i=flashCards.length-1;i>=0;i--){
-        const obj = flashCards[i];
-        const stack = document.createElement('div'); stack.className='card-stack';
-        const inner = document.createElement('div'); inner.className='card-inner';
-        const front = document.createElement('div'); front.className='card front'; front.textContent = obj.q;
-        const back = document.createElement('div'); back.className='card back'; back.textContent = obj.a;
-        inner.appendChild(front); inner.appendChild(back);
-        stack.appendChild(inner);
-        // position layers (top has lowest translateZ)
-        stack.style.transform = `translateY(${(i)*6}px) scale(${1 - i*0.015}) rotate(${(i- (flashCards.length/2))*1}deg)`;
-        stack.style.zIndex = 100 + i;
-        // clicking top card flips it
-        stack.onclick = (e) => {
-          // only flip the top-most card (highest zIndex)
-          const top = getTopStack();
-          if(stack !== top) return; // prevent flipping below cards
-          stack.classList.toggle('flipped');
-        };
-        area.appendChild(stack);
-      }
-      // set current index pointer
-      currentIndex = 0;
-      updateStackVisibility();
-      backdrop.classList.add('show');
-      backdrop.setAttribute('aria-hidden','false');
-    }
-    window.openFlashStack = openFlashStack;
-
-    // Helper: return top-most stack element
-    function getTopStack(){
-      const nodes = Array.from($('#stackArea').children);
-      if(!nodes.length) return null;
-      // top is last child appended (index nodes.length-1)
-      return nodes[nodes.length-1 - currentIndex] || nodes[nodes.length-1];
-    }
-
-    // flip the top card
-    function flipTop(){ const top = getTopStack(); if(!top) return; top.classList.toggle('flipped'); }
-    window.flipTop = flipTop;
-
-    // move to next card (pop top)
-    let currentIndex = 0;
-    function nextCard(){
-      const area = $('#stackArea'); const nodes = Array.from(area.children);
-      if(currentIndex >= nodes.length-1){ // finished deck
-        // small animation to indicate end
-        area.animate([{opacity:1},{opacity:0.6},{opacity:1}], { duration:300, easing:'ease' });
-        return;
-      }
-      // remove top visual by incrementing index and slightly animating
-      const top = nodes[nodes.length-1 - currentIndex];
-      top.animate([{transform: top.style.transform},{ transform: top.style.transform + ' translateX(400px) rotate(20deg)'}], { duration:300, easing:'ease' });
-      currentIndex++;
-      updateStackVisibility();
-    }
-    window.nextCard = nextCard;
-
-    // previous card (go back)
-    function prevCard(){
-      if(currentIndex <= 0) return;
-      currentIndex--;
-      updateStackVisibility();
-    }
-    window.prevCard = prevCard;
-
-    // Update which card is interactable (visual hint)
-    function updateStackVisibility(){
-      const area = $('#stackArea'); const nodes = Array.from(area.children);
-      nodes.forEach((n, idx) => {
-        const pos = nodes.length - 1 - idx; // 0 = top
-        if(idx < nodes.length - currentIndex - 1){
-          n.style.opacity = '0.3';
-          n.style.pointerEvents = 'none';
-        } else {
-          n.style.opacity = '1';
-          n.style.pointerEvents = 'auto';
-        }
-      });
-    }
-
-    // Close flash stack modal
-    function closeFlashStack(){
-      $('#stackBackdrop').classList.remove('show');
-      $('#stackBackdrop').setAttribute('aria-hidden','true');
-      $('#stackArea').innerHTML = '';
-      currentIndex = 0;
-    }
-    window.closeFlashStack = closeFlashStack;
-
-    /***** ===== AUTH UI + FIREBASE functions =====
-          - openAuth shows modal, toggleAuthMode switches between signup/login
-          - submitAuth performs sign up or login via firebase, then writes user to DB
-          - syncIframe appends uid/email to chat iframe query string
-    *****/
-    let authMode = 'signup'; // default mode
-    function openAuth(){
-      $('#authModal').classList.add('show'); $('#authModal').setAttribute('aria-hidden','false');
-      $('#authTitle').textContent = authMode === 'signup' ? 'Sign Up' : 'Login';
-      $('#authActionBtn').textContent = authMode === 'signup' ? 'Sign Up' : 'Login';
-      $('#authStatus').textContent = '';
-    }
-    window.openAuth = openAuth;
-
-    function closeAuth(){ $('#authModal').classList.remove('show'); $('#authModal').setAttribute('aria-hidden','true'); }
-    window.closeAuth = closeAuth;
-
-    function toggleAuthMode(){
-      authMode = authMode === 'signup' ? 'login' : 'signup';
-      $('#authTitle').textContent = authMode === 'signup' ? 'Sign Up' : 'Login';
-      $('#authActionBtn').textContent = authMode === 'signup' ? 'Sign Up' : 'Login';
-    }
-    window.toggleAuthMode = toggleAuthMode;
-
-    async function submitAuth(){
-      const email = $('#authEmail').value.trim(); const pass = $('#authPass').value.trim();
-      if(!email || !pass) { $('#authStatus').textContent = 'Enter email and password.'; return; }
-      $('#authStatus').textContent = 'Working...';
-      try {
-        if(authMode === 'signup'){
-          const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-          const user = userCred.user;
-          // write user email to realtime DB under users/uid
-          await set(ref(db, 'users/' + user.uid), { email: user.email, created: new Date().toISOString() });
-          $('#authStatus').textContent = 'Sign-up successful!';
-          syncIframe(user);
-          closeAuth();
-        } else {
-          const userCred = await signInWithEmailAndPassword(auth, email, pass);
-          const user = userCred.user;
-          $('#authStatus').textContent = 'Login successful!';
-          syncIframe(user);
-          closeAuth();
-        }
-      } catch(err){
-        $('#authStatus').textContent = `Error: ${err.message}`;
-      }
-    }
-    window.submitAuth = submitAuth;
-
-    // Attach uid/email to the chatbot iframe so backend (if any) can read it
-    function syncIframe(user){
-      const iframe = $('#mainFrame');
-      // append safe query params
-      const uid = user.uid; const email = encodeURIComponent(user.email);
-      const base = 'https://www.chatbase.co/chatbot-iframe/lXH4cGl6aJtp_bEFqlEcc';
-      iframe.src = `${base}?uid=${uid}&email=${email}`;
-      // update auth button to show email and logout option
-      $('#authBtn').textContent = user.email.split('@')[0] + ' ✓';
-      // add a small logout action on the auth button (long-press style)
-      $('#authBtn').onclick = () => { if(confirm('Logout?')) { signOut(auth).then(()=>{ $('#authBtn').textContent='Sign In / Sign Up'; $('#authBtn').onclick = openAuth; $('#mainFrame').src = base; }).catch(()=>{}); } };
-    }
-
-    /***** ===== PAGE STARTUP ===== */
-    // small welcome action on load
-    window.addEventListener('load', ()=> {
-      // show a welcome bot screen by default (chat iframe already loaded)
-      console.log('GHAYAS AI Chatbot ready');
-    });
-
-    // expose a few functions to global for debugging/console
-    window.openFlashStack = openFlashStack;
-    window.nextCard = nextCard;
-    window.prevCard = prevCard;
-    window.flipTop = flipTop;
-
-  </script>
-</body>
-</html>
